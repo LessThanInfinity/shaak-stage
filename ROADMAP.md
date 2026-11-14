@@ -18,6 +18,7 @@
 - **Expression variants**: a few alternate images per actor (angry, hurt, smug…) cycled with a key or a small picker. Deliberately left out for now.
 - **Stage art override UI**: a small field on the actor sheet for "stage image" and "scale" so you don't have to set the flags `shaak-stage.art` / `shaak-stage.scale` by hand. Only useful if an actor's portrait isn't what you want on stage.
 - **Auto-load a preset when a scene activates.**
+- **Built-in edge cleanup**: do what `tools/clean_edges.py` does automatically when an actor is staged (would need to save a cleaned copy into the world's data folder).
 - **Hotkey defaults** once you know which keys are free at your table.
 - **More styles / custom accent colour.**
 - **Player-driven speaking** (a player clicks their own character; request goes to the GM). Skipped: Discord overlays cover this at the moment.

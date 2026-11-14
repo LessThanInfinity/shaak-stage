@@ -1,14 +1,22 @@
 import { ID, Stage, getState, gmView } from "./state.mjs";
+import { onSidebar } from "./sidebar.mjs";
 
 /**
  * GM quick-swap strip: a slim column of the staged characters, always on screen, so changing
  * speaker is one click instead of opening the panel.
- *   click       = speak / dismiss
+ *   click       = speak (clicking the current speaker again does nothing)
  *   right-click = hide identity / reveal
+ *   bottom icon = dismiss the speaker
  * Sits on the opposite side of the screen from the portrait. GM only.
  */
 
 let el;
+let offset = 0;
+
+function applyOffset() {
+  if (!el) return;
+  el.style.transform = el.dataset.side === "right" && offset ? `translateX(${-offset}px)` : "";
+}
 
 export function mount() {
   if (!game.user.isGM) return;
@@ -16,7 +24,12 @@ export function mount() {
   el.id = "shaak-strip";
   el.hidden = true;
   document.body.append(el);
+  onSidebar((o) => {
+    offset = o;
+    applyOffset();
+  });
   el.addEventListener("click", (ev) => {
+    if (ev.target.closest(".ss-chip-dismiss")) return Stage.dismiss();
     const chip = ev.target.closest("[data-id]");
     if (chip) Stage.speak(chip.dataset.id);
   });
@@ -36,7 +49,16 @@ export function paint(state) {
   if (el.hidden) return;
 
   el.dataset.side = game.settings.get(ID, "side") === "right" ? "left" : "right";
+  applyOffset();
   const thumbs = game.settings.get(ID, "thumbs");
+
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "ss-chip ss-chip-dismiss";
+  dismiss.title = game.i18n.localize("SHAAKSTAGE.Dismiss");
+  dismiss.disabled = !speaker;
+  dismiss.innerHTML = '<i class="fa-solid fa-comment-slash"></i>';
+
   el.replaceChildren(
     ...stage.map((e, i) => {
       const view = gmView(e);
@@ -66,6 +88,7 @@ export function paint(state) {
       num.textContent = String(i + 1);
       chip.append(num);
       return chip;
-    })
+    }),
+    dismiss
   );
 }

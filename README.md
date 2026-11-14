@@ -16,10 +16,20 @@ https://github.com/LessThanInfinity/shaak-stage/releases/latest/download/module.
 
 1. Click the mask icon in the **Token** controls (left toolbar) to open the Stage panel (GM only).
 2. Search for an actor and click it to put them on stage. The spy icon adds them as **unknown** (a black silhouette and "???" for players).
-3. Click a staged character to make them speak; click again to dismiss. A slim strip of avatars also stays on screen for quick swaps (click = speak, right-click = hide/reveal).
+3. Click a staged character to make them speak. Clicking the current speaker again does nothing, so a stray double-click can't hide them; use the dismiss button (speech-bubble icon) to clear the speaker. A slim strip of avatars also stays on screen for quick swaps (click = speak, right-click = hide/reveal, bottom icon = dismiss).
 4. Save whole stages as **presets**.
 
 Uses each actor's portrait image. Cut-outs with transparent backgrounds work best: portraits are sized by their visible area so every character stands the same height.
+
+### A thin light line around a character?
+
+Some background-removal tools leave a 1-2px fringe of the original background colour along the outline, which shows as a faint light line on dark maps. It's in the image, not the module. Clean it once, offline, with the included tool (originals are never touched; needs `pip install pillow numpy`):
+
+```
+python tools/clean_edges.py "path/to/image.png" "path/to/folder" --out "path/to/clean"
+```
+
+Then point the actors at the `_clean.png` files. Add `--shrink 1` if a faint line remains.
 
 Optional flags on an actor: `shaak-stage.art` (a different stage image path) and `shaak-stage.scale` (size multiplier, e.g. `1.3`).
 

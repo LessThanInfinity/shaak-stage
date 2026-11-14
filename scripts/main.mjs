@@ -1,6 +1,7 @@
 import { ID, Stage, getState } from "./state.mjs";
 import * as Overlay from "./overlay.mjs";
 import * as Strip from "./strip.mjs";
+import { refreshSidebar } from "./sidebar.mjs";
 import { StagePanel } from "./panel.mjs";
 
 let panel;
@@ -156,6 +157,12 @@ Hooks.once("ready", () => {
   Overlay.paint(getState());
   // Handy for macros: game.modules.get("shaak-stage").api.Stage.speakIndex(0)
   game.modules.get(ID).api = { Stage, openPanel: () => getPanel().render({ force: true }) };
+});
+
+// Sidebar collapse/expand: re-measure once it has finished animating (cheap; no per-frame work).
+Hooks.on("collapseSidebar", () => {
+  setTimeout(refreshSidebar, 50);
+  setTimeout(refreshSidebar, 400);
 });
 
 // GM button in the Token controls (left toolbar).

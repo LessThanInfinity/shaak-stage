@@ -11,9 +11,10 @@
 
   position: fixed;
   bottom: 0;
-  right: var(--ss-offset, 0px);
+  right: 0; /* script slides it clear of the sidebar with a transform (cheap) */
   width: 0;
   height: 0;
+  will-change: transform; /* its own compositor layer: sliding it never re-draws the images */
   z-index: 25; /* above the canvas, below Foundry windows/dialogs */
   pointer-events: none; /* never blocks the canvas */
   user-select: none;
@@ -162,7 +163,9 @@
 }
 #shaak-strip[hidden] { display: none; }
 #shaak-strip[data-side="left"] { left: 76px; } /* clear of Foundry's scene controls */
-#shaak-strip[data-side="right"] { right: calc(var(--ss-offset, 0px) + 10px); }
+#shaak-strip[data-side="right"] { right: 10px; } /* script offsets it by the sidebar width via transform */
+.ss-chip-dismiss { font-size: 0.95rem; color: #bbb; border-style: dotted; }
+.ss-chip-dismiss:hover { color: #fff; }
 
 .ss-chip {
   position: relative;

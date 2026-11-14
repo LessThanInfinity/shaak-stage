@@ -1,4 +1,5 @@
 import { ID } from "./state.mjs";
+import { onSidebar } from "./sidebar.mjs";
 
 /**
  * The on-screen portraits. A handful of <figure>/<img> pairs. No canvas, no PIXI, no per-frame work.
@@ -46,28 +47,32 @@ export function mount() {
   document.body.append(root);
 
   applySettings();
-  trackSidebar();
-  window.addEventListener("resize", layout); // sizes are viewport-relative
+  // Keep clear of the sidebar. Moving is a transform only (cheap); the full re-layout (which
+  // depends on the sidebar width only for the lineup cut-off) is debounced until things settle.
+  onSidebar((o) => {
+    offset = o;
+    applyOffset();
+    layoutSoon();
+  });
+  window.addEventListener("resize", layoutSoon); // sizes are viewport-relative
 }
 
-/** Keep the portraits clear of the sidebar (it is fixed to the right edge). */
-function trackSidebar() {
-  const sb = document.getElementById("sidebar");
-  const update = () => {
-    const left = sb ? sb.getBoundingClientRect().left : window.innerWidth;
-    offset = Math.max(0, window.innerWidth - left);
-    document.documentElement.style.setProperty("--ss-offset", `${offset}px`); // also used by the GM strip
-    layout();
-  };
-  update();
-  window.addEventListener("resize", update);
-  if (sb && "ResizeObserver" in window) new ResizeObserver(update).observe(sb);
+function applyOffset() {
+  if (!root) return;
+  root.style.transform = root.dataset.side === "left" || !offset ? "" : `translateX(${-offset}px)`;
+}
+
+let layoutTimer = 0;
+function layoutSoon() {
+  clearTimeout(layoutTimer);
+  layoutTimer = setTimeout(layout, 120);
 }
 
 export function applySettings() {
   if (!root) return;
   root.dataset.side = game.settings.get(ID, "side");
   root.dataset.style = game.settings.get(ID, "style");
+  applyOffset();
   layout();
 }
 

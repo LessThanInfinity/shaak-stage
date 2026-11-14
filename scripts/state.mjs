@@ -86,6 +86,15 @@ async function build(actor, hidden, slot) {
 const clone = (o) => foundry.utils.deepClone(o);
 const newSlot = () => foundry.utils.randomID();
 
+// Ignore a repeat of the same action within a short window (stray double-clicks).
+const lastAction = new Map();
+function tooSoon(key, ms = 450) {
+  const now = performance.now();
+  if (now - (lastAction.get(key) ?? -Infinity) < ms) return true;
+  lastAction.set(key, now);
+  return false;
+}
+
 export const Stage = {
   async add(actorOrId, { hidden = false } = {}) {
     if (!game.user.isGM) return;
@@ -106,18 +115,31 @@ export const Stage = {
   },
 
   async remove(slot) {
+    // One shared key: after a removal the next tile slides under the cursor, so a double-click
+    // would otherwise remove two characters.
+    if (tooSoon("remove")) return;
     const s = clone(getState());
     s.stage = s.stage.filter((e) => e.id !== slot);
     if (s.speaker === slot) s.speaker = null;
     await commit(s);
   },
 
-  /** Make `slot` the speaker; speaking again (or passing null) dismisses. */
+  /**
+   * Make `slot` the speaker. Speaking the current speaker again does NOTHING (so an accidental
+   * double-click can never hide them). Use dismiss() to clear the speaker deliberately.
+   */
   async speak(slot) {
     const s = clone(getState());
-    if (!slot || s.speaker === slot) s.speaker = null;
-    else if (s.stage.some((e) => e.id === slot)) s.speaker = slot;
-    else return;
+    if (!slot) {
+      if (s.speaker === null) return;
+      s.speaker = null;
+    } else if (s.speaker === slot) {
+      return;
+    } else if (s.stage.some((e) => e.id === slot)) {
+      s.speaker = slot;
+    } else {
+      return;
+    }
     await commit(s);
   },
 
@@ -128,6 +150,7 @@ export const Stage = {
   },
 
   async toggleHidden(slot) {
+    if (tooSoon(`hide:${slot}`)) return; // a double-click would reveal then immediately re-hide
     const e = getState().stage.find((x) => x.id === slot);
     if (!e) return;
     const actor = actorFor(slot);
