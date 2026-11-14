@@ -1,0 +1,59 @@
+{
+  "SHAAKSTAGE": {
+    "Title": "Stage",
+    "ControlTitle": "Stage",
+    "OnStage": "On stage",
+    "Dismiss": "Dismiss speaker",
+    "ClearStage": "Clear stage",
+    "Lineup": "Show the rest of the stage beside the speaker (on/off)",
+    "SearchPlaceholder": "Search actors…",
+    "SearchHint": "Showing player characters. Type to search every actor.",
+    "NoResults": "No matching actors.",
+    "EmptyStage": "Nobody on stage yet. Add actors below.",
+    "Unknown": "???",
+    "Add": "Add to stage",
+    "AddHidden": "Add as unknown (silhouette)",
+    "Speak": "Click to speak / click again to dismiss",
+    "Hide": "Hide identity from players",
+    "Reveal": "Reveal identity to players",
+    "Remove": "Remove from stage",
+    "Presets": "Presets",
+    "SavePreset": "Save current stage as preset",
+    "PresetName": "Preset name (e.g. Tournament finals)",
+    "LoadPreset": "Load this preset (replaces the stage)",
+    "DeletePreset": "Delete preset",
+    "NoPresets": "No presets yet. Set up a stage, then save it.",
+    "PresetMissing": "Some actors in that preset no longer exist and were skipped.",
+    "ActorMissing": "Can't find the actor for that stage slot on this browser. Remove it and add the actor again.",
+    "SilhouetteFailed": "Couldn't build a silhouette for that image, so it was not staged as unknown.",
+    "Settings": {
+      "Style": {
+        "Name": "Stage style",
+        "Hint": "Name plate and backdrop look. Seen by everyone.",
+        "Persona": "Persona (red, jagged)",
+        "Phoenix": "Ruby Phoenix (crimson & gold banner)",
+        "Ink": "Ink & Seal (paper strip, red sun)",
+        "Classic": "Classic (plain plate)"
+      },
+      "Enabled": { "Name": "Show stage portraits", "Hint": "Turn off to never render portraits on this client." },
+      "Side": { "Name": "Portrait side", "Hint": "Which side of the screen this client shows the portrait on.", "Right": "Right", "Left": "Left" },
+      "Size": { "Name": "Portrait height (% of screen)", "Hint": "Smaller values use less GPU/RAM." },
+      "LineupMax": { "Name": "Lineup: max extra characters", "Hint": "How many other staged characters to show behind the speaker. 0 turns the lineup off on this client (lowest memory use)." },
+      "Thumbs": { "Name": "Thumbnails in the GM panel", "Hint": "Turn off to show names only (lowest memory use)." },
+      "Strip": { "Name": "Quick-swap strip (GM)", "Hint": "A slim column of staged characters on screen: click to speak, right-click to hide/reveal." }
+    },
+    "Keys": {
+      "Toggle": "Toggle stage panel",
+      "Dismiss": "Dismiss current speaker",
+      "Slot1": "Speak: stage slot 1",
+      "Slot2": "Speak: stage slot 2",
+      "Slot3": "Speak: stage slot 3",
+      "Slot4": "Speak: stage slot 4",
+      "Slot5": "Speak: stage slot 5",
+      "Slot6": "Speak: stage slot 6",
+      "Slot7": "Speak: stage slot 7",
+      "Slot8": "Speak: stage slot 8",
+      "Slot9": "Speak: stage slot 9"
+    }
+  }
+}

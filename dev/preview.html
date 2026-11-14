@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shaak Stage – dev preview</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="../styles/stage.css">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #222 url("") ; font: 14px sans-serif; }
+  #canvas-fake { position: fixed; inset: 0; background: radial-gradient(circle at 40% 40%, #5a6b4a, #1e2a20); }
+  #sidebar { position: fixed; top: 0; right: 0; bottom: 0; width: 300px; background: #1a1a1a; color: #aaa;
+    border-left: 1px solid #000; padding: 8px; z-index: 30; box-sizing: border-box; transition: width .15s; }
+  #sidebar.collapsed { width: 36px; overflow: hidden; }
+  #bar { position: fixed; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 40; display: flex; gap: 6px; }
+  button { cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="canvas-fake"></div>
+<aside id="sidebar">Fake sidebar (chat)<br><br><button onclick="this.parentNode.classList.toggle('collapsed')">collapse</button></aside>
+<div id="bar">
+  <button id="open">Open Stage panel</button>
+  <button id="side">Toggle side</button>
+  <button id="size">Size 70/50</button>
+  <button id="style">Style: …</button>
+</div>
+<script type="module">
+  await import("./mock-foundry.js");
+  await import("../scripts/main.mjs");
+  Hooks.call("init");
+  Hooks.call("ready");
+  const controls = { tokens: { tools: {} } };
+  Hooks.call("getSceneControlButtons", controls);
+  const tool = controls.tokens.tools["shaak-stage"];
+  console.log("scene control registered:", !!tool, tool?.icon);
+  document.getElementById("open").onclick = () => tool.onChange();
+  document.getElementById("side").onclick = () =>
+    game.settings.set("shaak-stage", "side", game.settings.get("shaak-stage", "side") === "right" ? "left" : "right");
+  document.getElementById("size").onclick = () =>
+    game.settings.set("shaak-stage", "size", game.settings.get("shaak-stage", "size") === 70 ? 50 : 70);
+  const styles = ["persona", "phoenix", "ink", "classic"];
+  const styleBtn = document.getElementById("style");
+  const showStyle = () => (styleBtn.textContent = "Style: " + game.settings.get("shaak-stage", "style"));
+  styleBtn.onclick = async () => {
+    const i = styles.indexOf(game.settings.get("shaak-stage", "style"));
+    await game.settings.set("shaak-stage", "style", styles[(i + 1) % styles.length]);
+    showStyle();
+  };
+  showStyle();
+  tool.onChange();
+</script>
+</body>
+</html>
