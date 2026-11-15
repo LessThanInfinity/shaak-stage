@@ -23,7 +23,8 @@ export function getState() {
   return {
     stage: Array.isArray(s.stage) ? s.stage : [],
     speaker: s.speaker ?? null,
-    lineup: s.lineup !== false
+    lineup: s.lineup !== false,
+    names: s.names !== false // false = image only, no name plate
   };
 }
 
@@ -44,6 +45,8 @@ async function commit(next, map) {
 }
 
 const warn = (key) => ui.notifications.warn(game.i18n.localize(`SHAAKSTAGE.${key}`));
+
+export const isFavorite = (actor) => !!actor?.getFlag?.(ID, "favorite");
 
 export function actorFor(slot) {
   const id = getGM().map[slot];
@@ -169,14 +172,30 @@ export const Stage = {
   },
 
   async clear() {
-    const s = clone(getState());
-    await commit({ stage: [], speaker: null, lineup: s.lineup }, {});
+    const { lineup, names } = getState();
+    await commit({ stage: [], speaker: null, lineup, names }, {});
   },
 
   async setLineup(on) {
     const s = clone(getState());
     s.lineup = !!on;
     await commit(s);
+  },
+
+  /** Show or hide the name plate for everyone (false = image only). */
+  async setNames(on) {
+    const s = clone(getState());
+    s.names = !!on;
+    await commit(s);
+  },
+
+  /** Mark / unmark an actor as a favorite. Stored on the actor, so it follows you between browsers. */
+  async setFavorite(actorOrId, on) {
+    if (!game.user.isGM) return;
+    const actor = typeof actorOrId === "string" ? game.actors.get(actorOrId) : actorOrId;
+    if (!actor) return;
+    if (on) await actor.setFlag(ID, "favorite", true);
+    else await actor.unsetFlag(ID, "favorite");
   },
 
   /* ---------- presets (GM-only, stored in the GM's client settings) ---------- */
@@ -216,7 +235,8 @@ export const Stage = {
     if (missing) warn("PresetMissing");
     const map = Object.fromEntries(built.map((b) => [b.entry.id, b.actorId]));
     const speaker = built.find((b) => b.actorId === preset.speaker)?.entry.id ?? null;
-    await commit({ stage: built.map((b) => b.entry), speaker, lineup: getState().lineup }, map);
+    const { lineup, names } = getState();
+    await commit({ stage: built.map((b) => b.entry), speaker, lineup, names }, map);
   },
 
   async deletePreset(id) {

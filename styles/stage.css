@@ -178,8 +178,6 @@
 #shaak-strip[hidden] { display: none; }
 #shaak-strip[data-side="left"] { left: 76px; } /* clear of Foundry's scene controls */
 #shaak-strip[data-side="right"] { right: 10px; } /* script offsets it by the sidebar width via transform */
-.ss-chip-dismiss { font-size: 0.95rem; color: #bbb; border-style: dotted; }
-.ss-chip-dismiss:hover { color: #fff; }
 
 .ss-chip {
   position: relative;
@@ -207,14 +205,139 @@
   background: rgba(0, 0, 0, 0.75); color: #fff;
   font-size: 10px; line-height: 1.3; border-top-left-radius: 4px;
 }
+/* The two utility buttons: open the panel (top) and dismiss the speaker (bottom). */
+.ss-chip-open { font-size: 1.15rem; color: #fff; background: #3a2616; border-color: #e8731a; margin-bottom: 4px; }
+.ss-chip-open:hover { background: #4d3220; border-color: #ffb066; }
+.ss-chip-dismiss { font-size: 0.95rem; color: #bbb; border-style: dotted; margin-top: 4px; }
+.ss-chip-dismiss:hover:not(:disabled) { color: #fff; }
+.ss-chip-dismiss:disabled { opacity: 0.45; cursor: default; }
 
 /* =====================================================================
    GM panel
+   Layout: one scrolling column of clearly separated sections (stage, display, presets, actors).
    ===================================================================== */
-.shaak-stage-panel .window-content { padding: 0.5rem; overflow: hidden; }
-.shaak-stage-panel .ss-panel { position: relative; display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+.shaak-stage-panel .window-content { padding: 0; overflow: hidden; }
 
-/* Shown while dragging an actor over the panel. pointer-events:none so it never steals the drop. */
+.shaak-stage-panel .ss-panel {
+  --ss-pad: 1.1rem;                    /* space between a section's edge and its content */
+  --ss-gap: 0.8rem;                    /* space between things inside a section */
+  --ss-line: rgba(128, 128, 128, 0.3); /* section dividers */
+  --ss-tile-max: 100px;                /* the biggest a stage tile ever gets */
+  --ss-tile-min: 84px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.ss-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+
+.ss-section { padding: var(--ss-pad); border-bottom: 1px solid var(--ss-line); }
+.ss-section:last-child { border-bottom: 0; }
+
+.ss-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ss-gap); margin-bottom: var(--ss-gap); }
+.ss-head h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0; border: 0; font-size: 1.15rem; }
+.ss-count:not(:empty) {
+  padding: 0.05rem 0.55rem; border-radius: 999px;
+  background: rgba(128, 128, 128, 0.3);
+  font-size: 0.75rem; font-weight: 600; line-height: 1.4;
+}
+.ss-toolbar { display: flex; gap: 0.4rem; }
+.ss-panel button[data-action]:not(.ss-row-main):not(.ss-save) { width: 2.1rem; height: 2.1rem; min-height: 0; padding: 0; line-height: 1; flex: none; }
+
+.ss-hint { margin: 0; opacity: 0.7; font-size: 0.85rem; line-height: 1.45; }
+
+/* ---- stage grid: tiles have a MAX size; a wider window just fits more per row ---- */
+.ss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--ss-tile-min), var(--ss-tile-max)));
+  gap: 0.75rem;
+  justify-content: start;
+}
+.ss-grid > .ss-hint { grid-column: 1 / -1; }
+
+.ss-tile {
+  position: relative;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  aspect-ratio: 3 / 4;
+  border: 2px solid var(--color-border-dark-4, #444);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #1b1b1b;
+}
+.ss-tile img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: top;
+}
+.ss-tile.is-unknown { border-style: dashed; }
+.ss-tile.is-unknown img { filter: brightness(0.35) grayscale(1); }
+.ss-tile.active { border-color: #e8731a; box-shadow: 0 0 0 2px #e8731a inset; }
+.ss-tile-num {
+  position: absolute; left: 0; top: 0;
+  padding: 0 6px; background: rgba(0, 0, 0, 0.7); color: #fff;
+  font-size: 11px; border-bottom-right-radius: 4px;
+}
+.ss-tile-name {
+  position: relative;
+  padding: 0.25rem 0.4rem;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff; font-size: 0.75rem; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ss-tile-btns { position: absolute; top: 3px; right: 3px; display: flex; flex-direction: column; gap: 3px; opacity: 0; }
+.ss-tile:hover .ss-tile-btns, .ss-tile:focus-within .ss-tile-btns { opacity: 1; }
+.ss-tile-btns button {
+  width: 1.55rem !important; height: 1.55rem !important;
+  font-size: 0.7rem; color: #fff;
+  background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.ss-tile-btns button.is-fav i, .ss-star.is-fav i { color: #f2b84b; }
+
+/* In a very wide window only the stage grid should grow; controls and lists keep a readable width. */
+.ss-controls-body,
+.ss-presets > :not(summary),
+.ss-actors > :not(.ss-head) { max-width: 36rem; }
+
+/* ---- collapsible sections ---- */
+.ss-controls > summary, .ss-presets > summary {
+  cursor: pointer; font-weight: 700; font-size: 1.15rem; line-height: 1.3;
+}
+.ss-controls[open] > summary, .ss-presets[open] > summary { margin-bottom: var(--ss-gap); }
+
+/* ---- Display controls ---- */
+.ss-controls-body { display: grid; gap: var(--ss-gap); }
+.ss-field { display: grid; grid-template-columns: 8.5rem 1fr; align-items: center; gap: 0.75rem; }
+.ss-field > label { font-size: 0.9rem; opacity: 0.85; }
+.ss-field select { width: 100%; height: 2.1rem; }
+.ss-seg { display: flex; }
+.ss-seg button { flex: 1; height: 2.1rem; min-height: 0; margin: 0; border-radius: 0; }
+.ss-seg button:first-child { border-radius: 4px 0 0 4px; }
+.ss-seg button:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
+.ss-seg button.active { background: #e8731a; color: #fff; border-color: #e8731a; }
+.ss-range { display: flex; align-items: center; gap: 0.75rem; }
+.ss-range input { flex: 1; margin: 0; }
+.ss-range output { min-width: 3.2ch; text-align: right; font-variant-numeric: tabular-nums; }
+.ss-check { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; line-height: 1.3; }
+.ss-check input { margin: 0; flex: none; }
+.ss-note { margin: 0; font-size: 0.8rem; opacity: 0.7; line-height: 1.4; }
+
+/* ---- presets ---- */
+.ss-preset-list { list-style: none; margin: 0 0 var(--ss-gap); padding: 0; display: grid; gap: 0.4rem; }
+.ss-preset-list li { display: flex; gap: 0.4rem; align-items: center; }
+.ss-presets .ss-save { width: 100%; height: 2.1rem; }
+
+/* ---- favorites / search ---- */
+.ss-actors input[type="search"] { width: 100%; height: 2.2rem; margin-bottom: var(--ss-gap); }
+.ss-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.ss-results li { display: flex; align-items: center; gap: 0.4rem; }
+.ss-results li.ss-hint { display: block; }
+.ss-row-main {
+  flex: 1; min-width: 0; height: 2.1rem; min-height: 0; margin: 0; padding: 0 0.75rem;
+  text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---- drag & drop hint: shown while dragging an actor over the panel; never steals the drop ---- */
 .ss-drop-hint {
   display: none;
   position: absolute;
@@ -237,64 +360,3 @@
 .ss-dropping-unknown .ss-drop-add { display: none; }
 .ss-dropping-unknown .ss-drop-unknown { display: inline; }
 .ss-dropping-unknown .ss-drop-hint { background: rgba(20, 20, 20, 0.5); border-color: #bbb; }
-
-.ss-stage { flex-shrink: 0; }
-.ss-stage header { display: flex; align-items: center; justify-content: space-between; }
-.ss-stage h3 { margin: 0; border: 0; }
-.ss-toolbar { display: flex; gap: 0.25rem; }
-.ss-toolbar button, .ss-tile-btns button, .ss-results li > button:last-child, .ss-preset-list li > button:last-child {
-  width: 1.8rem; height: 1.8rem; min-height: 0; padding: 0; line-height: 1;
-}
-.ss-toolbar button.active { background: #e8731a; color: #fff; }
-
-.ss-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
-  max-height: 20rem;
-  overflow-y: auto;
-}
-.ss-tile {
-  position: relative;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  aspect-ratio: 3 / 4;
-  border: 2px solid var(--color-border-dark-4, #444);
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
-  background: #1b1b1b;
-}
-.ss-tile img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; object-position: top;
-}
-.ss-tile.is-unknown { border-style: dashed; }
-.ss-tile.is-unknown img { filter: brightness(0.35) grayscale(1); }
-.ss-tile.active { border-color: #e8731a; box-shadow: 0 0 0 2px #e8731a inset; }
-.ss-tile-num {
-  position: absolute; left: 0; top: 0;
-  padding: 0 5px; background: rgba(0, 0, 0, 0.7); color: #fff;
-  font-size: 11px; border-bottom-right-radius: 4px;
-}
-.ss-tile-name {
-  position: relative;
-  padding: 0.15rem 0.3rem;
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff; font-size: var(--font-size-12, 12px);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ss-tile-btns { position: absolute; top: 2px; right: 2px; display: flex; gap: 2px; opacity: 0; }
-.ss-tile:hover .ss-tile-btns, .ss-tile:focus-within .ss-tile-btns { opacity: 1; }
-
-.ss-presets { flex-shrink: 0; }
-.ss-presets summary { cursor: pointer; font-weight: 600; margin-bottom: 0.25rem; }
-.ss-preset-list { list-style: none; margin: 0 0 0.3rem; padding: 0; max-height: 7rem; overflow-y: auto; }
-.ss-preset-list li { display: flex; gap: 0.25rem; margin-bottom: 0.2rem; }
-.ss-presets .ss-save { width: 100%; }
-
-.ss-search { display: flex; flex-direction: column; gap: 0.35rem; min-height: 0; flex: 1; }
-.ss-results { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
-.ss-results li { display: flex; gap: 0.25rem; margin-bottom: 0.2rem; }
-.ss-row-main { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ss-hint { opacity: 0.7; font-size: var(--font-size-12, 12px); margin: 0.25rem 0; grid-column: 1 / -1; }

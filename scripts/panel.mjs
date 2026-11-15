@@ -1,8 +1,31 @@
-import { ID, Stage, getState, gmView } from "./state.mjs";
+import { ID, Stage, getState, gmView, actorFor, isFavorite } from "./state.mjs";
 
 const { ApplicationV2, DialogV2 } = foundry.applications.api;
 const t = (k) => game.i18n.localize(`SHAAKSTAGE.${k}`);
-const MAX_RESULTS = 40;
+const MAX_RESULTS = 60;
+const STYLES = [
+  ["persona", "Persona"],
+  ["phoenix", "Phoenix"],
+  ["ink", "Ink"],
+  ["classic", "Classic"]
+];
+
+/* ---------- remember which sections are open (per browser) ---------- */
+const readOpen = (key, fallback) => {
+  try {
+    const v = localStorage.getItem(`${ID}.panel.${key}`);
+    return v === null ? fallback : v === "1";
+  } catch {
+    return fallback;
+  }
+};
+const writeOpen = (key, open) => {
+  try {
+    localStorage.setItem(`${ID}.panel.${key}`, open ? "1" : "0");
+  } catch {
+    /* storage unavailable: sections just reset to their defaults */
+  }
+};
 
 /* ---------- drag & drop ---------- */
 
@@ -52,34 +75,36 @@ async function actorFromDrop(data) {
 
 /**
  * GM control panel. Plain DOM (no Handlebars, no full re-render on state changes):
- * the skeleton is built once; only the stage grid, preset list and result list are repainted.
+ * the skeleton is built once; only the stage grid, controls, preset list and actor list are repainted.
  */
 export class StagePanel extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "shaak-stage-panel",
     classes: ["shaak-stage-panel"],
     window: { title: "SHAAKSTAGE.Title", icon: "fa-solid fa-masks-theater", resizable: true },
-    position: { width: 360, height: 620 },
+    position: { width: 440, height: 720 },
     actions: {
       speak: StagePanel.#speak,
       toggleHidden: StagePanel.#toggleHidden,
+      toggleFavorite: StagePanel.#toggleFavorite,
       remove: StagePanel.#remove,
       stageActor: StagePanel.#stageActor,
       stageHidden: StagePanel.#stageHidden,
       dismiss: StagePanel.#dismiss,
       clearStage: StagePanel.#clearStage,
-      toggleLineup: StagePanel.#toggleLineup,
       savePreset: StagePanel.#savePreset,
       loadPreset: StagePanel.#loadPreset,
       deletePreset: StagePanel.#deletePreset
     }
   };
 
+  #root;
   #grid;
+  #count;
   #results;
+  #actorsTitle;
   #presets;
   #input;
-  #lineupBtn;
 
   static #id = (target) => target.closest("[data-id]")?.dataset.id;
   static #speak(event, target) {
@@ -87,6 +112,12 @@ export class StagePanel extends ApplicationV2 {
   }
   static #toggleHidden(event, target) {
     Stage.toggleHidden(StagePanel.#id(target));
+  }
+  static async #toggleFavorite(event, target) {
+    // On a stage tile data-id is a stage slot; on a list row it is an actor id.
+    const id = StagePanel.#id(target);
+    const actor = game.actors.get(id) ?? actorFor(id);
+    if (actor) await Stage.setFavorite(actor, !isFavorite(actor));
   }
   static #remove(event, target) {
     Stage.remove(StagePanel.#id(target));
@@ -102,9 +133,6 @@ export class StagePanel extends ApplicationV2 {
   }
   static #clearStage() {
     Stage.clear();
-  }
-  static #toggleLineup() {
-    Stage.setLineup(!getState().lineup);
   }
   static #loadPreset(event, target) {
     Stage.loadPreset(StagePanel.#id(target));
@@ -129,42 +157,84 @@ export class StagePanel extends ApplicationV2 {
   async _renderHTML() {
     const root = document.createElement("div");
     root.className = "ss-panel";
+    const styleOptions = STYLES.map(([key]) => `<option value="${key}">${t(`Settings.Style.${key[0].toUpperCase()}${key.slice(1)}`)}</option>`).join("");
     root.innerHTML = `
       <div class="ss-drop-hint" aria-hidden="true">
         <span class="ss-drop-add">${t("DropAdd")}</span>
         <span class="ss-drop-unknown">${t("DropAddUnknown")}</span>
       </div>
-      <section class="ss-stage">
-        <header>
-          <h3>${t("OnStage")}</h3>
+
+      <div class="ss-scroll">
+      <section class="ss-section ss-stage">
+        <header class="ss-head">
+          <h3>${t("OnStage")} <span class="ss-count"></span></h3>
           <div class="ss-toolbar">
-            <button type="button" data-action="toggleLineup" title="${t("Lineup")}"><i class="fa-solid fa-people-line"></i></button>
             <button type="button" data-action="dismiss" title="${t("Dismiss")}"><i class="fa-solid fa-comment-slash"></i></button>
             <button type="button" data-action="clearStage" title="${t("ClearStage")}"><i class="fa-solid fa-broom"></i></button>
           </div>
         </header>
         <div class="ss-grid"></div>
       </section>
-      <details class="ss-presets">
+
+      <details class="ss-section ss-controls" data-key="display">
+        <summary>${t("Display")}</summary>
+        <div class="ss-controls-body">
+          <div class="ss-field">
+            <label for="ss-style">${t("StyleLabel")}</label>
+            <select id="ss-style" name="style">${styleOptions}</select>
+          </div>
+          <div class="ss-field">
+            <label>${t("SideLabel")}</label>
+            <div class="ss-seg" role="group">
+              <button type="button" data-side="left">${t("Left")}</button>
+              <button type="button" data-side="right">${t("Right")}</button>
+            </div>
+          </div>
+          <div class="ss-field">
+            <label for="ss-size">${t("SizeLabel")}</label>
+            <div class="ss-range">
+              <input id="ss-size" type="range" name="size" min="30" max="100" step="5">
+              <output class="ss-size-out"></output>
+            </div>
+          </div>
+          <label class="ss-check"><input type="checkbox" name="names"> <span>${t("ShowNames")}</span></label>
+          <label class="ss-check"><input type="checkbox" name="lineup"> <span>${t("ShowLineup")}</span></label>
+          <p class="ss-note">${t("DisplayNote")}</p>
+        </div>
+      </details>
+
+      <details class="ss-section ss-presets" data-key="presets">
         <summary>${t("Presets")}</summary>
         <ul class="ss-preset-list"></ul>
         <button type="button" class="ss-save" data-action="savePreset"><i class="fa-solid fa-floppy-disk"></i> ${t("SavePreset")}</button>
       </details>
-      <section class="ss-search">
+
+      <section class="ss-section ss-actors">
+        <header class="ss-head"><h3 class="ss-actors-title"></h3></header>
         <input type="search" placeholder="${t("SearchPlaceholder")}" autocomplete="off">
         <ul class="ss-results"></ul>
-      </section>`;
+      </section>
+      </div>`;
     return root;
   }
 
   _replaceHTML(result, content) {
     content.replaceChildren(result);
+    this.#root = result;
     this.#grid = result.querySelector(".ss-grid");
+    this.#count = result.querySelector(".ss-count");
     this.#results = result.querySelector(".ss-results");
+    this.#actorsTitle = result.querySelector(".ss-actors-title");
     this.#presets = result.querySelector(".ss-preset-list");
-    this.#input = result.querySelector("input");
-    this.#lineupBtn = result.querySelector("[data-action=toggleLineup]");
+    this.#input = result.querySelector(".ss-actors input[type=search]");
     this.#input.addEventListener("input", foundry.utils.debounce(() => this.#paintResults(), 120));
+
+    // collapsible sections remember whether they were open
+    for (const d of result.querySelectorAll("details[data-key]")) {
+      d.open = readOpen(d.dataset.key, d.dataset.key === "display");
+      d.addEventListener("toggle", () => writeOpen(d.dataset.key, d.open));
+    }
+    this.#bindControls(result);
     this.#bindDrop(result);
     this.#paintAll(); // read the CURRENT stage straight away (see the note on _onRender)
   }
@@ -181,7 +251,185 @@ export class StagePanel extends ApplicationV2 {
 
   _onClose(options) {
     super._onClose?.(options);
-    this.#grid = this.#results = this.#presets = this.#input = this.#lineupBtn = null; // drop refs to the removed DOM
+    this.#root = this.#grid = this.#count = this.#results = this.#actorsTitle = this.#presets = this.#input = null; // drop refs to the removed DOM
+  }
+
+  /** Called by main.mjs whenever the shared state changes. No-op while the panel is closed. */
+  paint() {
+    if (!this.#grid) return;
+    this.#paintAll();
+  }
+
+  /** Cheap refresh of just the Display controls (called when a display setting changes). */
+  paintControls() {
+    if (this.#root) this.#paintControls();
+  }
+
+  #paintAll() {
+    this.#paintStage();
+    this.#paintControls();
+    this.#paintPresets();
+    this.#paintResults();
+  }
+
+  /* ---------- Display controls ---------- */
+
+  #bindControls(root) {
+    const sizeOut = root.querySelector(".ss-size-out");
+    const applySize = foundry.utils.debounce((v) => game.settings.set(ID, "size", v), 40);
+    root.addEventListener("input", (ev) => {
+      if (ev.target.name !== "size") return;
+      const v = Number(ev.target.value);
+      sizeOut.textContent = `${v}%`; // instant feedback; the setting is written a moment later
+      applySize(v);
+    });
+    root.addEventListener("change", (ev) => {
+      const el = ev.target;
+      if (el.name === "style") game.settings.set(ID, "style", el.value);
+      else if (el.name === "names") Stage.setNames(el.checked);
+      else if (el.name === "lineup") Stage.setLineup(el.checked);
+    });
+    root.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-side]");
+      if (b) game.settings.set(ID, "side", b.dataset.side);
+    });
+  }
+
+  #paintControls() {
+    const root = this.#root;
+    const { names, lineup } = getState();
+    const side = game.settings.get(ID, "side");
+    const size = Number(game.settings.get(ID, "size")) || 70;
+    root.querySelector("select[name=style]").value = game.settings.get(ID, "style");
+    for (const b of root.querySelectorAll("[data-side]")) {
+      const on = b.dataset.side === side;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+    }
+    root.querySelector("input[name=size]").value = String(size);
+    root.querySelector(".ss-size-out").textContent = `${size}%`;
+    root.querySelector("input[name=names]").checked = names;
+    root.querySelector("input[name=lineup]").checked = lineup;
+  }
+
+  /* ---------- stage grid ---------- */
+
+  #paintStage() {
+    const { stage, speaker } = getState();
+    this.#count.textContent = stage.length ? String(stage.length) : "";
+    const thumbs = game.settings.get(ID, "thumbs");
+    if (!stage.length) {
+      const p = document.createElement("p");
+      p.className = "ss-hint";
+      p.textContent = t("EmptyStage");
+      this.#grid.replaceChildren(p);
+      return;
+    }
+    this.#grid.replaceChildren(
+      ...stage.map((e, i) => {
+        const view = gmView(e); // the GM sees real names/art, even for unknown characters
+        const fav = isFavorite(view.actor);
+        const tile = document.createElement("div");
+        tile.className = "ss-tile";
+        tile.classList.toggle("active", e.id === speaker);
+        tile.classList.toggle("is-unknown", !!e.hidden);
+        tile.dataset.id = e.id;
+        tile.dataset.action = "speak";
+        tile.tabIndex = 0;
+        tile.title = t("Speak");
+
+        if (thumbs && view.img) {
+          const im = document.createElement("img");
+          im.src = view.img;
+          im.alt = "";
+          im.loading = "lazy";
+          im.decoding = "async";
+          im.draggable = false;
+          tile.append(im);
+        }
+        const num = document.createElement("span");
+        num.className = "ss-tile-num";
+        num.textContent = String(i + 1);
+        const name = document.createElement("span");
+        name.className = "ss-tile-name";
+        name.textContent = view.name;
+        tile.append(num, name);
+
+        const btns = document.createElement("div");
+        btns.className = "ss-tile-btns";
+        btns.append(
+          iconButton("toggleFavorite", "fa-star", fav ? t("Unfavorite") : t("Favorite"), fav ? "fa-solid" : "fa-regular"),
+          iconButton("toggleHidden", e.hidden ? "fa-eye-slash" : "fa-eye", e.hidden ? t("Reveal") : t("Hide")),
+          iconButton("remove", "fa-xmark", t("Remove"))
+        );
+        btns.firstChild.classList.toggle("is-fav", fav);
+        tile.append(btns);
+        return tile;
+      })
+    );
+  }
+
+  #paintPresets() {
+    const presets = Stage.listPresets();
+    if (!presets.length) {
+      const li = document.createElement("li");
+      li.className = "ss-hint";
+      li.textContent = t("NoPresets");
+      this.#presets.replaceChildren(li);
+      return;
+    }
+    this.#presets.replaceChildren(
+      ...presets.map((p) => {
+        const li = document.createElement("li");
+        li.dataset.id = p.id;
+        const load = document.createElement("button");
+        load.type = "button";
+        load.className = "ss-row-main";
+        load.dataset.action = "loadPreset";
+        load.title = t("LoadPreset");
+        load.textContent = `${p.name} (${p.entries.length})`;
+        li.append(load, iconButton("deletePreset", "fa-trash", t("DeletePreset")));
+        return li;
+      })
+    );
+  }
+
+  /* ---------- favorites + search ---------- */
+
+  #paintResults() {
+    const q = this.#input.value.trim().toLowerCase();
+    this.#actorsTitle.textContent = q ? t("SearchResults") : t("Favorites");
+
+    const staged = new Set(getState().stage.map((e) => gmView(e).actor?.id));
+    let list = game.actors.contents.filter((a) => !staged.has(a.id));
+    // Empty search = your favorites; typing searches every actor.
+    list = q ? list.filter((a) => a.name.toLowerCase().includes(q)) : list.filter((a) => isFavorite(a));
+    list.sort((a, b) => Number(isFavorite(b)) - Number(isFavorite(a)) || a.name.localeCompare(b.name));
+
+    const rows = list.slice(0, MAX_RESULTS).map((a) => {
+      const fav = isFavorite(a);
+      const li = document.createElement("li");
+      li.dataset.id = a.id;
+      const star = iconButton("toggleFavorite", "fa-star", fav ? t("Unfavorite") : t("Favorite"), fav ? "fa-solid" : "fa-regular");
+      star.classList.add("ss-star");
+      star.classList.toggle("is-fav", fav);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ss-row-main";
+      btn.dataset.action = "stageActor";
+      btn.title = t("Add");
+      btn.textContent = a.name;
+      li.append(star, btn, iconButton("stageHidden", "fa-user-secret", t("AddHidden")));
+      return li;
+    });
+
+    if (!rows.length) {
+      const li = document.createElement("li");
+      li.className = "ss-hint";
+      li.textContent = q ? t("NoResults") : t("NoFavorites");
+      rows.push(li);
+    }
+    this.#results.replaceChildren(...rows);
   }
 
   /**
@@ -223,136 +471,13 @@ export class StagePanel extends ApplicationV2 {
       }
     });
   }
-
-  /** Called by main.mjs whenever the shared state changes. No-op while the panel is closed. */
-  paint() {
-    if (!this.#grid) return;
-    this.#paintAll();
-  }
-
-  #paintAll() {
-    this.#paintStage();
-    this.#paintPresets();
-    this.#paintResults();
-  }
-
-  #paintStage() {
-    const { stage, speaker, lineup } = getState();
-    this.#lineupBtn.classList.toggle("active", lineup);
-    const thumbs = game.settings.get(ID, "thumbs");
-    if (!stage.length) {
-      const p = document.createElement("p");
-      p.className = "ss-hint";
-      p.textContent = t("EmptyStage");
-      this.#grid.replaceChildren(p);
-      return;
-    }
-    this.#grid.replaceChildren(
-      ...stage.map((e, i) => {
-        const view = gmView(e); // the GM sees real names/art, even for unknown characters
-        const tile = document.createElement("div");
-        tile.className = "ss-tile";
-        tile.classList.toggle("active", e.id === speaker);
-        tile.classList.toggle("is-unknown", !!e.hidden);
-        tile.dataset.id = e.id;
-        tile.dataset.action = "speak";
-        tile.tabIndex = 0;
-        tile.title = t("Speak");
-
-        if (thumbs && view.img) {
-          const im = document.createElement("img");
-          im.src = view.img;
-          im.alt = "";
-          im.loading = "lazy";
-          im.decoding = "async";
-          im.draggable = false;
-          tile.append(im);
-        }
-        const num = document.createElement("span");
-        num.className = "ss-tile-num";
-        num.textContent = String(i + 1);
-        const name = document.createElement("span");
-        name.className = "ss-tile-name";
-        name.textContent = view.name;
-        tile.append(num, name);
-
-        const btns = document.createElement("div");
-        btns.className = "ss-tile-btns";
-        btns.append(
-          iconButton("toggleHidden", e.hidden ? "fa-eye-slash" : "fa-eye", e.hidden ? t("Reveal") : t("Hide")),
-          iconButton("remove", "fa-xmark", t("Remove"))
-        );
-        tile.append(btns);
-        return tile;
-      })
-    );
-  }
-
-  #paintPresets() {
-    const presets = Stage.listPresets();
-    if (!presets.length) {
-      const li = document.createElement("li");
-      li.className = "ss-hint";
-      li.textContent = t("NoPresets");
-      this.#presets.replaceChildren(li);
-      return;
-    }
-    this.#presets.replaceChildren(
-      ...presets.map((p) => {
-        const li = document.createElement("li");
-        li.dataset.id = p.id;
-        const load = document.createElement("button");
-        load.type = "button";
-        load.className = "ss-row-main";
-        load.dataset.action = "loadPreset";
-        load.title = t("LoadPreset");
-        load.textContent = `${p.name} (${p.entries.length})`;
-        li.append(load, iconButton("deletePreset", "fa-trash", t("DeletePreset")));
-        return li;
-      })
-    );
-  }
-
-  #paintResults() {
-    const q = this.#input.value.trim().toLowerCase();
-    const gmMap = new Set(getState().stage.map((e) => gmView(e).actor?.id));
-    let list = game.actors.contents.filter((a) => !gmMap.has(a.id));
-    list = q ? list.filter((a) => a.name.toLowerCase().includes(q)) : list.filter((a) => a.hasPlayerOwner);
-    list.sort((a, b) => a.name.localeCompare(b.name));
-
-    const rows = list.slice(0, MAX_RESULTS).map((a) => {
-      const li = document.createElement("li");
-      li.dataset.id = a.id;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ss-row-main";
-      btn.dataset.action = "stageActor";
-      btn.title = t("Add");
-      btn.textContent = a.name;
-      li.append(btn, iconButton("stageHidden", "fa-user-secret", t("AddHidden")));
-      return li;
-    });
-
-    if (!rows.length) {
-      const li = document.createElement("li");
-      li.className = "ss-hint";
-      li.textContent = t("NoResults");
-      rows.push(li);
-    } else if (!q) {
-      const li = document.createElement("li");
-      li.className = "ss-hint";
-      li.textContent = t("SearchHint");
-      rows.unshift(li);
-    }
-    this.#results.replaceChildren(...rows);
-  }
 }
 
-function iconButton(action, icon, title) {
+function iconButton(action, icon, title, style = "fa-solid") {
   const b = document.createElement("button");
   b.type = "button";
   b.dataset.action = action;
   b.title = title;
-  b.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+  b.innerHTML = `<i class="${style} ${icon}"></i>`;
   return b;
 }

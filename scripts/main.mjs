@@ -20,7 +20,7 @@ Hooks.once("init", () => {
     scope: "world",
     config: false,
     type: Object,
-    default: { stage: [], speaker: null, lineup: true },
+    default: { stage: [], speaker: null, lineup: true, names: true },
     onChange: onStateChange
   });
 
@@ -50,7 +50,10 @@ Hooks.once("init", () => {
       classic: "SHAAKSTAGE.Settings.Style.Classic"
     },
     default: "persona",
-    onChange: () => Overlay.applySettings()
+    onChange: () => {
+      Overlay.applySettings();
+      panel?.paintControls();
+    }
   });
 
   /* ---- per-client options ---- */
@@ -77,6 +80,7 @@ Hooks.once("init", () => {
     onChange: () => {
       Overlay.applySettings();
       Strip.paint(getState());
+      panel?.paintControls();
     }
   });
   game.settings.register(ID, "size", {
@@ -86,7 +90,10 @@ Hooks.once("init", () => {
     config: true,
     type: new foundry.data.fields.NumberField({ min: 30, max: 100, step: 5, integer: true, initial: 70 }),
     default: 70,
-    onChange: () => Overlay.applySettings()
+    onChange: () => {
+      Overlay.applySettings();
+      panel?.paintControls();
+    }
   });
   game.settings.register(ID, "lineupMax", {
     name: "SHAAKSTAGE.Settings.LineupMax.Name",
@@ -156,7 +163,19 @@ Hooks.once("ready", () => {
   Strip.mount();
   Overlay.paint(getState());
   // Handy for macros: game.modules.get("shaak-stage").api.Stage.speakIndex(0)
-  game.modules.get(ID).api = { Stage, openPanel: () => getPanel().render({ force: true }) };
+  game.modules.get(ID).api = {
+    Stage,
+    openPanel: () => getPanel().render({ force: true }),
+    togglePanel: () => getPanel().toggle()
+  };
+});
+
+// Keep the panel's actor list and favorites current when actors are created, renamed, deleted or (un)starred.
+const repaintPanel = foundry.utils.debounce(() => panel?.paint(), 100);
+Hooks.on("createActor", repaintPanel);
+Hooks.on("deleteActor", repaintPanel);
+Hooks.on("updateActor", (actor, changes) => {
+  if ("name" in changes || foundry.utils.hasProperty(changes, `flags.${ID}`)) repaintPanel();
 });
 
 // Sidebar collapse/expand: re-measure once it has finished animating (cheap; no per-frame work).

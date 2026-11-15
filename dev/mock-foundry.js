@@ -32,7 +32,17 @@ const mk = (id, name, hue, pc, img) => {
     documentName: "Actor",
     id, name, img: img ?? art(name, hue), hasPlayerOwner: pc, flags,
     getFlag: (scope, key) => flags[`${scope}.${key}`],
-    async setFlag(scope, key, value) { flags[`${scope}.${key}`] = structuredClone(value); return this; }
+    // Like Foundry, changing a flag fires the updateActor hook with the changed data.
+    async setFlag(scope, key, value) {
+      flags[`${scope}.${key}`] = structuredClone(value);
+      Hooks.call("updateActor", this, { flags: { [scope]: { [key]: value } } });
+      return this;
+    },
+    async unsetFlag(scope, key) {
+      delete flags[`${scope}.${key}`];
+      Hooks.call("updateActor", this, { flags: { [scope]: { [`-=${key}`]: null } } });
+      return this;
+    }
   };
 };
 // Real cutouts live in dev/samples (git-ignored); the rest fall back to generated art.
@@ -71,7 +81,8 @@ window.game = {
     format: (k, d) => lookup(k).replace(/\{(\w+)\}/g, (m, n) => d?.[n] ?? m)
   },
   actors: { contents: actors, get: (id) => actors.find((a) => a.id === id) },
-  modules: { get: () => ({}) },
+  // One persistent object per module id, like Foundry (the module stores its `api` on it).
+  modules: { _m: {}, get(id) { return (this._m[id] ??= {}); } },
   keybindings: { register() {} },
   settings: {
     register(m, k, data) { defs.set(key(m, k), data); store.set(key(m, k), structuredClone(data.default)); },
@@ -130,6 +141,7 @@ window.foundry = {
   utils: {
     deepClone: (o) => structuredClone(o),
     randomID: () => Math.random().toString(36).slice(2, 18).padEnd(16, "x"),
+    hasProperty: (obj, path) => path.split(".").reduce((o, k) => (o != null && k in Object(o) ? o[k] : undefined), obj) !== undefined,
     debounce: (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
   },
   data: { fields: { NumberField: class { constructor(o) { Object.assign(this, o); } } } },

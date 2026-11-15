@@ -212,7 +212,11 @@ export async function paint(state) {
 
   current = items;
   main.classList.toggle("is-unknown", speaker.hidden || crossfade);
-  if (!crossfade) plate.textContent = speaker.hidden ? game.i18n.localize("SHAAKSTAGE.Unknown") : speaker.name;
+  const showNames = state.names !== false; // GM can switch the name plate off for everyone (image only)
+  if (!crossfade) {
+    const label = speaker.hidden ? game.i18n.localize("SHAAKSTAGE.Unknown") : speaker.name;
+    plate.textContent = showNames ? label : ""; // an empty plate is not drawn at all
+  }
   for (const it of items.slice(1)) it.fig.classList.toggle("is-unknown", it.entry.hidden);
 
   const wasVisible = !root.hidden && shownKey === speaker.id;
@@ -222,7 +226,7 @@ export async function paint(state) {
   shownKey = speaker.id;
   prev = { id: speaker.id, hidden: speaker.hidden };
 
-  if (crossfade) doReveal(fade, speaker, my);
+  if (crossfade) doReveal(fade, speaker, my, showNames);
   else if (!wasVisible && !reducedMotion()) {
     const dx = root.dataset.side === "left" ? -40 : 40;
     main.animate(
@@ -236,7 +240,7 @@ export async function paint(state) {
 }
 
 /** Fade the real art in over the silhouette, swapping the name plate halfway. */
-function doReveal(fade, entry, my) {
+function doReveal(fade, entry, my, showNames) {
   fade.className = "ss-fade";
   fade.style.cssText = mainImg.style.cssText; // same size/position as the silhouette beneath
   fade.style.opacity = "0";
@@ -245,7 +249,7 @@ function doReveal(fade, entry, my) {
     if (my === token) {
       mainImg.src = fade.src;
       main.classList.remove("is-unknown");
-      plate.textContent = entry.name;
+      plate.textContent = showNames ? entry.name : "";
     }
     fade.remove();
   };
@@ -254,6 +258,6 @@ function doReveal(fade, entry, my) {
   a.onfinish = finish;
   a.oncancel = () => fade.remove();
   setTimeout(() => {
-    if (my === token) plate.textContent = entry.name;
+    if (my === token) plate.textContent = showNames ? entry.name : "";
   }, 350);
 }

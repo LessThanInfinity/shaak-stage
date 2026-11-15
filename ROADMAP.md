@@ -7,7 +7,9 @@
 - Reveal animation (silhouette cross-fades into the real art)
 - Presets (save / load / delete a whole stage)
 - Drag actors (or tokens) from the sidebar onto the panel to stage them; Shift = unknown
-- Quick-swap strip (click = speak, right-click = hide/reveal)
+- Quick-swap strip (open-panel icon, click = speak, right-click = hide/reveal, dismiss)
+- Favorites (starred actors listed by default instead of every player character)
+- Display controls in the panel (style, side, size, show/hide names, lineup)
 - Lineup mode (speaker large; the rest of the stage dimmed and smaller beside them)
 - Style presets: Persona, Ruby Phoenix, Ink & Seal, Classic
 - Optional hotkeys (slot 1–9, dismiss, toggle panel) – all unbound by default so nothing clashes
