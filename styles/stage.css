@@ -22,16 +22,30 @@
 #shaak-stage[hidden] { display: none; }
 #shaak-stage[data-side="left"] { right: auto; left: 0; }
 
+/* Foundry's core stylesheet decorates every "figure" / "figure img" (width:100%, margin, a 1px border and a
+   drop shadow). Our portraits are figures, so undo ALL of it explicitly; !important so that no game
+   system or other module styling of figure/img can bring a box back round the (transparent) image. */
 #shaak-stage figure {
   position: absolute;
   bottom: 0;
-  margin: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 #shaak-stage figure[hidden] { display: none; }
 #shaak-stage img {
   position: absolute; /* sized and offset from script */
   max-width: none;
   max-height: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 
 /* Lineup members: smaller (done in script), dimmed, tucked behind the speaker. */

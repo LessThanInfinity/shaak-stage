@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <title>Shaak Stage – dev preview</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- The exact rules from Foundry v13's foundry2.css that touch <figure>/<img>. The stub harness has no
+     core CSS, which hid the border bug these rules cause; keep them here so it can't happen again. -->
+<style>
+  img { max-width: 100%; display: block; }
+  figure { width: 100%; margin: 1rem 0; }
+  figure img, figure iframe, figure video {
+    display: block; margin: 0 auto; clear: both;
+    border: 1px solid #5c6370; box-shadow: 0 0 4px #000;
+  }
+</style>
 <link rel="stylesheet" href="../styles/stage.css">
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #222 url("") ; font: 14px sans-serif; }
