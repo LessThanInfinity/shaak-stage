@@ -7,13 +7,14 @@
 - Reveal animation (silhouette cross-fades into the real art)
 - Presets (save / load / delete a whole stage)
 - Built-in edge cleanup (one cleaned file per actor, designated folder, manual re-clean, safe fallbacks)
+- Drag actors (or tokens) from the sidebar onto the panel to stage them; Shift = unknown
 - Quick-swap strip (click = speak, right-click = hide/reveal)
 - Lineup mode (speaker large; the rest of the stage dimmed and smaller beside them)
 - Style presets: Persona, Ruby Phoenix, Ink & Seal, Classic
 - Optional hotkeys (slot 1–9, dismiss, toggle panel) – all unbound by default so nothing clashes
 
 ## Phase 2 (planned)
-- **Faster staging**: drag an actor from the sidebar onto the panel; right-click an actor or token → "Add to stage" (and "Add as unknown").
+- **Faster staging, part 2**: right-click an actor or token → "Add to stage" (and "Add as unknown"). *(Dragging an actor onto the panel is done.)* Could also accept drops on the quick-swap strip.
 
 ## Future ideas (not planned yet)
 - **Expression variants**: a few alternate images per actor (angry, hurt, smug…) cycled with a key or a small picker. Deliberately left out for now.

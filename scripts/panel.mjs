@@ -4,6 +4,52 @@ const { ApplicationV2, DialogV2 } = foundry.applications.api;
 const t = (k) => game.i18n.localize(`SHAAKSTAGE.${k}`);
 const MAX_RESULTS = 40;
 
+/* ---------- drag & drop ---------- */
+
+/** The JSON Foundry attaches when you drag a document ({ type, uuid }). */
+function readDragData(ev) {
+  const TE = foundry.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
+  try {
+    const data = TE.getDragEventData(ev);
+    if (data && Object.keys(data).length) return data;
+  } catch {
+    /* fall through to a plain parse */
+  }
+  try {
+    return JSON.parse(ev.dataTransfer.getData("text/plain"));
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve a dropped Actor or Token to a WORLD actor, or warn and return null. */
+async function actorFromDrop(data) {
+  if (!data || !["Actor", "Token"].includes(data.type)) {
+    ui.notifications.warn(t("DropNotActor"));
+    return null;
+  }
+  let doc = null;
+  try {
+    const resolve = foundry.utils?.fromUuid ?? globalThis.fromUuid;
+    doc = data.uuid ? await resolve(data.uuid) : null;
+  } catch {
+    /* unknown uuid: handled below */
+  }
+  if (!doc && data.type === "Actor" && data.id) doc = game.actors.get(data.id);
+  let actor = data.type === "Token" ? doc?.actor : doc;
+  if (actor?.documentName !== "Actor") {
+    ui.notifications.warn(t("DropNotActor"));
+    return null;
+  }
+  if (actor.pack) {
+    // A compendium entry: staging records data on the actor, which needs a real world actor.
+    ui.notifications.warn(t("DropImport"));
+    return null;
+  }
+  actor = game.actors.get(actor.id) ?? actor; // an unlinked token's synthetic actor -> its world actor
+  return actor;
+}
+
 /**
  * GM control panel. Plain DOM (no Handlebars, no full re-render on state changes):
  * the skeleton is built once; only the stage grid, preset list and result list are repainted.
@@ -88,6 +134,10 @@ export class StagePanel extends ApplicationV2 {
     const root = document.createElement("div");
     root.className = "ss-panel";
     root.innerHTML = `
+      <div class="ss-drop-hint" aria-hidden="true">
+        <span class="ss-drop-add">${t("DropAdd")}</span>
+        <span class="ss-drop-unknown">${t("DropAddUnknown")}</span>
+      </div>
       <section class="ss-stage">
         <header>
           <h3>${t("OnStage")}</h3>
@@ -119,7 +169,48 @@ export class StagePanel extends ApplicationV2 {
     this.#input = result.querySelector("input");
     this.#lineupBtn = result.querySelector("[data-action=toggleLineup]");
     this.#input.addEventListener("input", foundry.utils.debounce(() => this.#paintResults(), 120));
+    this.#bindDrop(result);
     this.paint();
+  }
+
+  /**
+   * Drop an actor (or token) from the sidebar anywhere on the panel to add it to the stage.
+   * Hold Shift while dropping to add it as unknown (silhouette).
+   */
+  #bindDrop(root) {
+    let depth = 0; // dragenter/dragleave also fire for every child element, so count them
+    const carriesData = (ev) => ev.dataTransfer?.types?.includes("text/plain");
+    const off = () => {
+      depth = 0;
+      root.classList.remove("ss-dropping", "ss-dropping-unknown");
+    };
+    root.addEventListener("dragenter", (ev) => {
+      if (!carriesData(ev)) return;
+      ev.preventDefault();
+      depth++;
+      root.classList.add("ss-dropping");
+    });
+    root.addEventListener("dragover", (ev) => {
+      if (!carriesData(ev)) return;
+      ev.preventDefault(); // required, or the browser refuses the drop
+      ev.dataTransfer.dropEffect = "copy";
+      root.classList.toggle("ss-dropping-unknown", ev.shiftKey);
+    });
+    root.addEventListener("dragleave", () => {
+      if (--depth <= 0) off();
+    });
+    root.addEventListener("drop", async (ev) => {
+      if (!carriesData(ev)) return;
+      ev.preventDefault();
+      const asUnknown = ev.shiftKey;
+      off();
+      try {
+        const actor = await actorFromDrop(readDragData(ev));
+        if (actor) await Stage.add(actor, { hidden: asUnknown });
+      } catch (err) {
+        console.warn(`${ID} | could not add the dropped actor`, err);
+      }
+    });
   }
 
   /** Called by main.mjs whenever the shared state changes. */

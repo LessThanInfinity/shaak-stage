@@ -212,7 +212,31 @@
    GM panel
    ===================================================================== */
 .shaak-stage-panel .window-content { padding: 0.5rem; overflow: hidden; }
-.shaak-stage-panel .ss-panel { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+.shaak-stage-panel .ss-panel { position: relative; display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+
+/* Shown while dragging an actor over the panel. pointer-events:none so it never steals the drop. */
+.ss-drop-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+  background: rgba(232, 115, 26, 0.22);
+  border: 2px dashed #e8731a;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.ss-dropping .ss-drop-hint { display: flex; }
+.ss-drop-unknown { display: none; }
+.ss-dropping-unknown .ss-drop-add { display: none; }
+.ss-dropping-unknown .ss-drop-unknown { display: inline; }
+.ss-dropping-unknown .ss-drop-hint { background: rgba(20, 20, 20, 0.5); border-color: #bbb; }
 
 .ss-stage { flex-shrink: 0; }
 .ss-stage header { display: flex; align-items: center; justify-content: space-between; }

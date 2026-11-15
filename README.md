@@ -15,7 +15,7 @@ https://github.com/LessThanInfinity/shaak-stage/releases/latest/download/module.
 ## Use
 
 1. Click the mask icon in the **Token** controls (left toolbar) to open the Stage panel (GM only).
-2. Search for an actor and click it to put them on stage. The spy icon adds them as **unknown** (a black silhouette and "???" for players).
+2. Put actors on stage by **dragging them from the Actors sidebar onto the Stage panel** (a dragged token works too), or search in the panel and click. **Hold Shift while dropping** (or use the spy icon) to add them as **unknown** (a black silhouette and "???" for players). Only world actors can be staged, so import compendium actors first.
 3. Click a staged character to make them speak. Clicking the current speaker again does nothing, so a stray double-click can't hide them; use the dismiss button (speech-bubble icon) to clear the speaker. A slim strip of avatars also stays on screen for quick swaps (click = speak, right-click = hide/reveal, bottom icon = dismiss).
 4. Save whole stages as **presets**.
 

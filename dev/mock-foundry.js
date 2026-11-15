@@ -29,6 +29,7 @@ function art(name, hue) {
 const mk = (id, name, hue, pc, img) => {
   const flags = {};
   return {
+    documentName: "Actor",
     id, name, img: img ?? art(name, hue), hasPlayerOwner: pc, flags,
     getFlag: (scope, key) => flags[`${scope}.${key}`],
     async setFlag(scope, key, value) { flags[`${scope}.${key}`] = structuredClone(value); return this; }
@@ -44,6 +45,19 @@ const actors = [
   mk("a6", "Squall", 0, false, "samples/squall.png"),
   mk("a7", "General Kaso Hida", 0, true, "samples/kaso.png")
 ];
+
+// Things a user could drop on the panel besides a normal world actor (see the drop tests).
+const compendiumActor = { documentName: "Actor", id: "c1", name: "Goblin (compendium)", pack: "pf2e.bestiary", img: "samples/squall.png" };
+const syntheticActor = { documentName: "Actor", id: "a2", name: "Lictor Vrane (token copy)", img: "samples/vrane.png" }; // unlinked token's actor
+const uuidTable = {
+  "Compendium.pf2e.bestiary.Actor.c1": () => compendiumActor,
+  "Scene.s1.Token.t1": () => ({ documentName: "Token", actor: syntheticActor }),
+  "JournalEntry.j1": () => ({ documentName: "JournalEntry", id: "j1", name: "Some journal" })
+};
+window.fromUuid = async (uuid) => {
+  if (uuid.startsWith("Actor.")) return game.actors.get(uuid.slice(6)) ?? null;
+  return uuidTable[uuid]?.() ?? null;
+};
 
 window.__notes = [];
 const note = (level) => (m) => { window.__notes.push(`${level}: ${m}`); console.log("[notify]", level, m); };
@@ -122,6 +136,16 @@ window.foundry = {
   data: { fields: { NumberField: class { constructor(o) { Object.assign(this, o); } } } },
   applications: {
     apps: { FilePicker: { implementation: FilePicker } },
+    ux: {
+      TextEditor: {
+        implementation: {
+          // Same job as Foundry's: read the JSON a dragged document carries.
+          getDragEventData(ev) {
+            try { return JSON.parse(ev.dataTransfer.getData("text/plain")); } catch { return {}; }
+          }
+        }
+      }
+    },
     api: {
       ApplicationV2,
       // Real Foundry shows a dialog; the harness just answers with a preset name.
