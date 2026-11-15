@@ -63,23 +63,6 @@ window.__notes = [];
 const note = (level) => (m) => { window.__notes.push(`${level}: ${m}`); console.log("[notify]", level, m); };
 window.ui = { notifications: { info: note("info"), warn: note("warn"), error: note("error") } };
 
-// Stand-in for Foundry's FilePicker: uploads are POSTed to dev/serve.py, which writes them under dev/.
-// Like the real thing it refuses to upload into a folder that doesn't exist yet. Tests can set
-// window.__failUploads = true to simulate a server that rejects uploads.
-const madeDirs = new Set();
-window.__uploadLog = [];
-const FilePicker = {
-  async createDirectory(source, target) { madeDirs.add(target); window.__uploadLog.push(`mkdir ${target}`); },
-  async upload(source, dir, file) {
-    window.__uploadLog.push(`upload ${dir}/${file.name}`);
-    if (window.__failUploads) throw new Error("server rejected the upload");
-    if (!madeDirs.has(dir)) throw new Error(`no such directory: ${dir}`);
-    const res = await fetch(`/dev/__upload?path=${encodeURIComponent(`${dir}/${file.name}`)}`, { method: "POST", body: file });
-    if (!res.ok) throw new Error("upload http " + res.status);
-    return { status: "success", path: `${dir}/${file.name}` };
-  }
-};
-
 window.game = {
   user: { isGM: true },
   world: { id: "test" },
@@ -151,7 +134,6 @@ window.foundry = {
   },
   data: { fields: { NumberField: class { constructor(o) { Object.assign(this, o); } } } },
   applications: {
-    apps: { FilePicker: { implementation: FilePicker } },
     ux: {
       TextEditor: {
         implementation: {

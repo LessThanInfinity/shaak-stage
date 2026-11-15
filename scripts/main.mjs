@@ -53,25 +53,6 @@ Hooks.once("init", () => {
     onChange: () => Overlay.applySettings()
   });
 
-  /* ---- cleaned art ---- */
-  game.settings.register(ID, "autoClean", {
-    name: "SHAAKSTAGE.Settings.AutoClean.Name",
-    hint: "SHAAKSTAGE.Settings.AutoClean.Hint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false // opt-in: nothing is written to the world folder unless you turn this on or press a tile's clean button
-  });
-  game.settings.register(ID, "cleanDir", {
-    name: "SHAAKSTAGE.Settings.CleanDir.Name",
-    hint: "SHAAKSTAGE.Settings.CleanDir.Hint",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "",
-    filePicker: "folder"
-  });
-
   /* ---- per-client options ---- */
   game.settings.register(ID, "enabled", {
     name: "SHAAKSTAGE.Settings.Enabled.Name",
