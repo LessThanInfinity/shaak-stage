@@ -60,7 +60,7 @@ Hooks.once("init", () => {
     scope: "world",
     config: true,
     type: Boolean,
-    default: true
+    default: false // opt-in: nothing is written to the world folder unless you turn this on or press a tile's clean button
   });
   game.settings.register(ID, "cleanDir", {
     name: "SHAAKSTAGE.Settings.CleanDir.Name",

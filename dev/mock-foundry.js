@@ -99,10 +99,16 @@ window.game = {
 
 class ApplicationV2 {
   static DEFAULT_OPTIONS = {};
+  // Follows Foundry v13's real render sequence (client/applications/api/application.mjs):
+  //   state RENDERING -> _renderHTML -> _replaceHTML -> state RENDERED -> _onRender.
+  // `rendered` is therefore FALSE while _replaceHTML runs. An earlier version of this stub flipped it
+  // to true too soon, which hid a bug where the panel skipped its first paint.
   #el = null;
-  get rendered() { return !!this.#el; }
+  #state = "NONE";
+  get rendered() { return this.#state === "RENDERED"; }
   async render() {
     if (this.#el) return this;
+    this.#state = "RENDERING";
     const o = this.constructor.DEFAULT_OPTIONS;
     const el = document.createElement("div");
     el.className = "window-app application " + (o.classes ?? []).join(" ");
@@ -122,9 +128,19 @@ class ApplicationV2 {
     });
     const html = await this._renderHTML({}, {});
     this._replaceHTML(html, el.querySelector(".window-content"), {});
+    this.#state = "RENDERED";
+    await this._onRender({}, {});
     return this;
   }
-  async close() { this.#el?.remove(); this.#el = null; }
+  _onRender() {}
+  _onClose() {}
+  async close() {
+    this.#state = "CLOSING";
+    this.#el?.remove();
+    this.#el = null;
+    this.#state = "CLOSED";
+    this._onClose({});
+  }
 }
 
 window.foundry = {

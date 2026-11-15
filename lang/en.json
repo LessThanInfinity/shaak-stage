@@ -43,7 +43,7 @@
         "Ink": "Ink & Seal (paper strip, red sun)",
         "Classic": "Classic (plain plate)"
       },
-      "AutoClean": { "Name": "Clean images automatically", "Hint": "Remove the thin light fringe some cut-outs have. The first time an actor is staged, the module makes one cleaned copy of their image and uses it from then on. Turn off to only clean when you press an actor's clean button. Existing cleaned copies are always used." },
+      "AutoClean": { "Name": "Clean images automatically", "Hint": "Off by default. Removes the thin light fringe some cut-outs have: when ON, the first time an actor is staged the module saves one cleaned copy of their image into the folder below and uses it from then on. When OFF nothing is written unless you press the wand button on a staged character's tile. Existing cleaned copies are always used." },
       "CleanDir": { "Name": "Cleaned images folder", "Hint": "Where the cleaned copies are saved, one file per actor (named after the actor's ID). Leave blank for worlds/<this world>/shaak-stage-clean. The folder is created for you." },
       "Enabled": { "Name": "Show stage portraits", "Hint": "Turn off to never render portraits on this client." },
       "Side": { "Name": "Portrait side", "Hint": "Which side of the screen this client shows the portrait on.", "Right": "Right", "Left": "Left" },

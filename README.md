@@ -23,14 +23,15 @@ Uses each actor's portrait image. Cut-outs with transparent backgrounds work bes
 
 ### A thin light line around a character?
 
-Some background-removal tools leave a 1-2px fringe of the original background colour along the outline, which shows as a faint light line on dark maps. It's in the image, so the module cleans it for you:
+Some background-removal tools leave a 1-2px fringe of the original background colour along the outline, which can show as a faint light line on dark maps. It's in the image, and the module can clean it. This is **optional and off by default**, so nothing is written to your world folder unless you ask:
 
-- **Automatic:** the first time an actor is staged, the module makes one cleaned copy of their image and uses it from then on. Your original image is never changed or replaced.
+- **Manual (default):** hover a staged character's tile and press the wand button.
+- **Automatic (opt-in):** turn on **Clean images automatically** and the first time an actor is staged, the module makes one cleaned copy of their image and uses it from then on. Your original image is never changed or replaced.
 - **One file per actor:** saved as `<actor id>.png` in a single folder, by default `worlds/<your world>/shaak-stage-clean` (created for you). Re-cleaning overwrites that file, so nothing piles up. Change the folder with the **Cleaned images folder** setting.
 - **Reuse:** if a cleaned copy already exists for the actor's current image it is used as is. If you change the actor's image, it's cleaned again.
-- **Manual re-clean:** hover a staged character's tile and press the wand button. From a macro: `game.modules.get("shaak-stage").api.Stage.cleanActor(actor)`.
+- **From a macro:** `game.modules.get("shaak-stage").api.Stage.cleanActor(actor)`.
 - **If anything goes wrong** (upload blocked, image unreadable, hosting that doesn't allow uploads) you get a warning and the actor's normal image is used. Cleaning can never stop a character from being staged.
-- Turn automatic cleaning off with **Clean images automatically**; existing cleaned copies are still used, and the wand button still works.
+- Existing cleaned copies are always used, whether or not automatic cleaning is on.
 
 Limits: art hosted on another website can't be cleaned (the browser blocks it), and deleting an actor leaves its cleaned file behind in that folder.
 

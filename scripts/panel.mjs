@@ -170,7 +170,22 @@ export class StagePanel extends ApplicationV2 {
     this.#lineupBtn = result.querySelector("[data-action=toggleLineup]");
     this.#input.addEventListener("input", foundry.utils.debounce(() => this.#paintResults(), 120));
     this.#bindDrop(result);
-    this.paint();
+    this.#paintAll(); // read the CURRENT stage straight away (see the note on _onRender)
+  }
+
+  /**
+   * Foundry only marks an application `rendered` AFTER _replaceHTML returns, so painting must not be
+   * gated on `this.rendered` there (that skipped the first paint and left a reopened panel blank until
+   * something changed). Paint again here, once the window is live, so it always shows the latest state.
+   */
+  async _onRender(context, options) {
+    await super._onRender?.(context, options);
+    this.#paintAll();
+  }
+
+  _onClose(options) {
+    super._onClose?.(options);
+    this.#grid = this.#results = this.#presets = this.#input = this.#lineupBtn = null; // drop refs to the removed DOM
   }
 
   /**
@@ -213,9 +228,13 @@ export class StagePanel extends ApplicationV2 {
     });
   }
 
-  /** Called by main.mjs whenever the shared state changes. */
+  /** Called by main.mjs whenever the shared state changes. No-op while the panel is closed. */
   paint() {
-    if (!this.rendered) return;
+    if (!this.#grid) return;
+    this.#paintAll();
+  }
+
+  #paintAll() {
     this.#paintStage();
     this.#paintPresets();
     this.#paintResults();
