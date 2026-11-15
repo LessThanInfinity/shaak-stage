@@ -60,9 +60,29 @@ export function gmView(entry) {
   };
 }
 
+/**
+ * If a cleaned copy of this image sits next to it ("<name>_clean.png", as written by
+ * tools/clean_edges.py), use that instead. One cheap HEAD request, only when staging an actor.
+ * Anything that can't be confirmed as an existing image falls back to the original path.
+ */
+async function preferClean(src) {
+  if (!src || !game.settings.get(ID, "preferClean")) return src;
+  if (/^([a-z]+:)?\/\//i.test(src) || /_clean\.[a-z0-9]+$/i.test(src)) return src; // external URL / already clean
+  const candidate = `${src.replace(/\.[^./\\]+$/, "")}_clean.png`;
+  if (candidate === src) return src;
+  try {
+    const res = await fetch(candidate, { method: "HEAD" });
+    if (res.ok && (res.headers.get("content-type") ?? "").startsWith("image/")) return candidate;
+  } catch {
+    /* offline / blocked: just use the original */
+  }
+  return src;
+}
+
 /** Build the public entry for an actor. Returns null if an unknown-silhouette couldn't be made. */
 async function build(actor, hidden, slot) {
-  const src = actor.getFlag(ID, "art") || actor.img; // flag `art` overrides the stage image
+  // flag `art` overrides the stage image; then prefer a cleaned copy of whichever image that is
+  const src = await preferClean(actor.getFlag(ID, "art") || actor.img);
   const entry = {
     id: slot,
     hidden: !!hidden,

@@ -35,6 +35,7 @@
         "Ink": "Ink & Seal (paper strip, red sun)",
         "Classic": "Classic (plain plate)"
       },
+      "PreferClean": { "Name": "Use cleaned images when available", "Hint": "When staging an actor, use \"<image name>_clean.png\" from the same folder if it exists (made by tools/clean_edges.py to remove the light fringe round cut-outs). Applies when an actor is staged." },
       "Enabled": { "Name": "Show stage portraits", "Hint": "Turn off to never render portraits on this client." },
       "Side": { "Name": "Portrait side", "Hint": "Which side of the screen this client shows the portrait on.", "Right": "Right", "Left": "Left" },
       "Size": { "Name": "Portrait height (% of screen)", "Hint": "Smaller values use less GPU/RAM." },

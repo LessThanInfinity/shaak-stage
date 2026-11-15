@@ -29,7 +29,7 @@ Some background-removal tools leave a 1-2px fringe of the original background co
 python tools/clean_edges.py "path/to/image.png" "path/to/folder" --out "path/to/clean"
 ```
 
-Then point the actors at the `_clean.png` files. Add `--shrink 1` if a faint line remains.
+The cleaned copies are written next to the originals as `<name>_clean.png`. You don't need to re-point any actors: when you put an actor on stage, the module looks for `<image name>_clean.png` in the same folder and uses it if it exists (otherwise the normal image). Make sure the `_clean` files are in the same Foundry folder as the originals. Turn this off with the setting **Use cleaned images when available**. It applies when an actor is staged, so re-add an actor to pick up a newly cleaned image. Add `--shrink 1` to the tool if a faint line remains.
 
 Optional flags on an actor: `shaak-stage.art` (a different stage image path) and `shaak-stage.scale` (size multiplier, e.g. `1.3`).
 

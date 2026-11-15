@@ -53,6 +53,15 @@ Hooks.once("init", () => {
     onChange: () => Overlay.applySettings()
   });
 
+  game.settings.register(ID, "preferClean", {
+    name: "SHAAKSTAGE.Settings.PreferClean.Name",
+    hint: "SHAAKSTAGE.Settings.PreferClean.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   /* ---- per-client options ---- */
   game.settings.register(ID, "enabled", {
     name: "SHAAKSTAGE.Settings.Enabled.Name",
