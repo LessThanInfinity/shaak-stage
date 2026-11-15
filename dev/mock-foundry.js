@@ -26,7 +26,14 @@ function art(name, hue) {
     <text x="300" y="840" text-anchor="middle" font-size="64" font-family="sans-serif" fill="#fff" stroke="#000" stroke-width="3">${name}</text></svg>`;
   return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 }
-const mk = (id, name, hue, pc, img) => ({ id, name, img: img ?? art(name, hue), hasPlayerOwner: pc, getFlag: () => undefined });
+const mk = (id, name, hue, pc, img) => {
+  const flags = {};
+  return {
+    id, name, img: img ?? art(name, hue), hasPlayerOwner: pc, flags,
+    getFlag: (scope, key) => flags[`${scope}.${key}`],
+    async setFlag(scope, key, value) { flags[`${scope}.${key}`] = structuredClone(value); return this; }
+  };
+};
 // Real cutouts live in dev/samples (git-ignored); the rest fall back to generated art.
 const actors = [
   mk("a1", "Armiger Katya", 0, true, "samples/katya.png"),
@@ -34,14 +41,38 @@ const actors = [
   mk("a3", "Maralictor Thorn", 0, true, "samples/thorn.png"),
   mk("a4", "Sinifier Moross", 0, false, "samples/moross.png"),
   mk("a5", "Silvius", 0, false, "samples/silvius.png"),
-  mk("a6", "Squall", 0, false, "samples/squall.png")
+  mk("a6", "Squall", 0, false, "samples/squall.png"),
+  mk("a7", "General Kaso Hida", 0, true, "samples/kaso.png")
 ];
 
-window.ui = { notifications: { warn: (m) => console.warn("[notify]", m), error: (m) => console.error("[notify]", m) } };
+window.__notes = [];
+const note = (level) => (m) => { window.__notes.push(`${level}: ${m}`); console.log("[notify]", level, m); };
+window.ui = { notifications: { info: note("info"), warn: note("warn"), error: note("error") } };
+
+// Stand-in for Foundry's FilePicker: uploads are POSTed to dev/serve.py, which writes them under dev/.
+// Like the real thing it refuses to upload into a folder that doesn't exist yet. Tests can set
+// window.__failUploads = true to simulate a server that rejects uploads.
+const madeDirs = new Set();
+window.__uploadLog = [];
+const FilePicker = {
+  async createDirectory(source, target) { madeDirs.add(target); window.__uploadLog.push(`mkdir ${target}`); },
+  async upload(source, dir, file) {
+    window.__uploadLog.push(`upload ${dir}/${file.name}`);
+    if (window.__failUploads) throw new Error("server rejected the upload");
+    if (!madeDirs.has(dir)) throw new Error(`no such directory: ${dir}`);
+    const res = await fetch(`/dev/__upload?path=${encodeURIComponent(`${dir}/${file.name}`)}`, { method: "POST", body: file });
+    if (!res.ok) throw new Error("upload http " + res.status);
+    return { status: "success", path: `${dir}/${file.name}` };
+  }
+};
 
 window.game = {
   user: { isGM: true },
-  i18n: { localize: lookup, format: lookup },
+  world: { id: "test" },
+  i18n: {
+    localize: lookup,
+    format: (k, d) => lookup(k).replace(/\{(\w+)\}/g, (m, n) => d?.[n] ?? m)
+  },
   actors: { contents: actors, get: (id) => actors.find((a) => a.id === id) },
   modules: { get: () => ({}) },
   keybindings: { register() {} },
@@ -90,6 +121,7 @@ window.foundry = {
   },
   data: { fields: { NumberField: class { constructor(o) { Object.assign(this, o); } } } },
   applications: {
+    apps: { FilePicker: { implementation: FilePicker } },
     api: {
       ApplicationV2,
       // Real Foundry shows a dialog; the harness just answers with a preset name.

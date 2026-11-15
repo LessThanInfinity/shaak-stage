@@ -17,6 +17,7 @@ export class StagePanel extends ApplicationV2 {
     actions: {
       speak: StagePanel.#speak,
       toggleHidden: StagePanel.#toggleHidden,
+      cleanArt: StagePanel.#cleanArt,
       remove: StagePanel.#remove,
       stageActor: StagePanel.#stageActor,
       stageHidden: StagePanel.#stageHidden,
@@ -41,6 +42,9 @@ export class StagePanel extends ApplicationV2 {
   }
   static #toggleHidden(event, target) {
     Stage.toggleHidden(StagePanel.#id(target));
+  }
+  static #cleanArt(event, target) {
+    Stage.cleanSlot(StagePanel.#id(target));
   }
   static #remove(event, target) {
     Stage.remove(StagePanel.#id(target));
@@ -170,6 +174,7 @@ export class StagePanel extends ApplicationV2 {
         btns.className = "ss-tile-btns";
         btns.append(
           iconButton("toggleHidden", e.hidden ? "fa-eye-slash" : "fa-eye", e.hidden ? t("Reveal") : t("Hide")),
+          iconButton("cleanArt", "fa-wand-magic-sparkles", t("Clean")),
           iconButton("remove", "fa-xmark", t("Remove"))
         );
         tile.append(btns);

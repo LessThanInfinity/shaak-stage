@@ -53,13 +53,23 @@ Hooks.once("init", () => {
     onChange: () => Overlay.applySettings()
   });
 
-  game.settings.register(ID, "preferClean", {
-    name: "SHAAKSTAGE.Settings.PreferClean.Name",
-    hint: "SHAAKSTAGE.Settings.PreferClean.Hint",
+  /* ---- cleaned art ---- */
+  game.settings.register(ID, "autoClean", {
+    name: "SHAAKSTAGE.Settings.AutoClean.Name",
+    hint: "SHAAKSTAGE.Settings.AutoClean.Hint",
     scope: "world",
     config: true,
     type: Boolean,
     default: true
+  });
+  game.settings.register(ID, "cleanDir", {
+    name: "SHAAKSTAGE.Settings.CleanDir.Name",
+    hint: "SHAAKSTAGE.Settings.CleanDir.Hint",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "",
+    filePicker: "folder"
   });
 
   /* ---- per-client options ---- */

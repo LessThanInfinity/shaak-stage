@@ -25,6 +25,10 @@
     "NoPresets": "No presets yet. Set up a stage, then save it.",
     "PresetMissing": "Some actors in that preset no longer exist and were skipped.",
     "ActorMissing": "Can't find the actor for that stage slot on this browser. Remove it and add the actor again.",
+    "Clean": "Re-clean this character's image (removes the light edge fringe)",
+    "Cleaning": "Cleaning the image for {name}…",
+    "Cleaned": "Cleaned the image for {name}.",
+    "CleanFailed": "Couldn't clean the image for {name}, so the image they already have is being used.",
     "SilhouetteFailed": "Couldn't build a silhouette for that image, so it was not staged as unknown.",
     "Settings": {
       "Style": {
@@ -35,7 +39,8 @@
         "Ink": "Ink & Seal (paper strip, red sun)",
         "Classic": "Classic (plain plate)"
       },
-      "PreferClean": { "Name": "Use cleaned images when available", "Hint": "When staging an actor, use \"<image name>_clean.png\" from the same folder if it exists (made by tools/clean_edges.py to remove the light fringe round cut-outs). Applies when an actor is staged." },
+      "AutoClean": { "Name": "Clean images automatically", "Hint": "Remove the thin light fringe some cut-outs have. The first time an actor is staged, the module makes one cleaned copy of their image and uses it from then on. Turn off to only clean when you press an actor's clean button. Existing cleaned copies are always used." },
+      "CleanDir": { "Name": "Cleaned images folder", "Hint": "Where the cleaned copies are saved, one file per actor (named after the actor's ID). Leave blank for worlds/<this world>/shaak-stage-clean. The folder is created for you." },
       "Enabled": { "Name": "Show stage portraits", "Hint": "Turn off to never render portraits on this client." },
       "Side": { "Name": "Portrait side", "Hint": "Which side of the screen this client shows the portrait on.", "Right": "Right", "Left": "Left" },
       "Size": { "Name": "Portrait height (% of screen)", "Hint": "Smaller values use less GPU/RAM." },

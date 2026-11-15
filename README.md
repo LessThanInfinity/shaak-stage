@@ -23,13 +23,22 @@ Uses each actor's portrait image. Cut-outs with transparent backgrounds work bes
 
 ### A thin light line around a character?
 
-Some background-removal tools leave a 1-2px fringe of the original background colour along the outline, which shows as a faint light line on dark maps. It's in the image, not the module. Clean it once, offline, with the included tool (originals are never touched; needs `pip install pillow numpy`):
+Some background-removal tools leave a 1-2px fringe of the original background colour along the outline, which shows as a faint light line on dark maps. It's in the image, so the module cleans it for you:
+
+- **Automatic:** the first time an actor is staged, the module makes one cleaned copy of their image and uses it from then on. Your original image is never changed or replaced.
+- **One file per actor:** saved as `<actor id>.png` in a single folder, by default `worlds/<your world>/shaak-stage-clean` (created for you). Re-cleaning overwrites that file, so nothing piles up. Change the folder with the **Cleaned images folder** setting.
+- **Reuse:** if a cleaned copy already exists for the actor's current image it is used as is. If you change the actor's image, it's cleaned again.
+- **Manual re-clean:** hover a staged character's tile and press the wand button. From a macro: `game.modules.get("shaak-stage").api.Stage.cleanActor(actor)`.
+- **If anything goes wrong** (upload blocked, image unreadable, hosting that doesn't allow uploads) you get a warning and the actor's normal image is used. Cleaning can never stop a character from being staged.
+- Turn automatic cleaning off with **Clean images automatically**; existing cleaned copies are still used, and the wand button still works.
+
+Limits: art hosted on another website can't be cleaned (the browser blocks it), and deleting an actor leaves its cleaned file behind in that folder.
+
+There's also an offline batch tool, `tools/clean_edges.py`, if you'd rather clean a whole folder yourself (needs `pip install pillow numpy`). The module doesn't pick its output up automatically:
 
 ```
 python tools/clean_edges.py "path/to/image.png" "path/to/folder" --out "path/to/clean"
 ```
-
-The cleaned copies are written next to the originals as `<name>_clean.png`. You don't need to re-point any actors: when you put an actor on stage, the module looks for `<image name>_clean.png` in the same folder and uses it if it exists (otherwise the normal image). Make sure the `_clean` files are in the same Foundry folder as the originals. Turn this off with the setting **Use cleaned images when available**. It applies when an actor is staged, so re-add an actor to pick up a newly cleaned image. Add `--shrink 1` to the tool if a faint line remains.
 
 Optional flags on an actor: `shaak-stage.art` (a different stage image path) and `shaak-stage.scale` (size multiplier, e.g. `1.3`).
 

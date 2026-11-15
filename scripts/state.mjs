@@ -1,4 +1,5 @@
 import { measureBox, makeSilhouette } from "./measure.mjs";
+import { cleanImage, uploadPng, imageExists } from "./clean.mjs";
 
 export const ID = "shaak-stage";
 
@@ -60,29 +61,63 @@ export function gmView(entry) {
   };
 }
 
-/**
- * If a cleaned copy of this image sits next to it ("<name>_clean.png", as written by
- * tools/clean_edges.py), use that instead. One cheap HEAD request, only when staging an actor.
- * Anything that can't be confirmed as an existing image falls back to the original path.
+/* ---------- cleaned art (one file per actor) ----------
+ * <cleanDir>/<actorId>.png holds the cleaned copy. The actor's flag `shaak-stage.clean` records
+ * which original image it was made from, so a changed portrait is noticed and re-cleaned.
+ * Any failure falls back to the original image: cleaning must never break staging.
  */
-async function preferClean(src) {
-  if (!src || !game.settings.get(ID, "preferClean")) return src;
-  if (/^([a-z]+:)?\/\//i.test(src) || /_clean\.[a-z0-9]+$/i.test(src)) return src; // external URL / already clean
-  const candidate = `${src.replace(/\.[^./\\]+$/, "")}_clean.png`;
-  if (candidate === src) return src;
+
+export function getCleanDir() {
+  const dir = String(game.settings.get(ID, "cleanDir") ?? "").trim().replace(/^\/+|\/+$/g, "");
+  return dir || `worlds/${game.world.id}/shaak-stage-clean`;
+}
+
+const withVersion = (rec) => `${rec.path}?v=${rec.v}`; // cache-bust: the file is overwritten in place
+
+// Clean one image at a time: it is CPU-heavy, and loading a preset would otherwise start many at once.
+let cleanQueue = Promise.resolve();
+const enqueue = (fn) => {
+  const run = cleanQueue.then(fn, fn);
+  cleanQueue = run.catch(() => {});
+  return run;
+};
+
+async function runClean(actor, original) {
+  const dir = getCleanDir();
+  const blob = await cleanImage(original);
+  const path = await uploadPng(blob, dir, `${actor.id}.png`);
+  const rec = { src: original, path, v: Date.now() };
+  await actor.setFlag(ID, "clean", rec);
+  return rec;
+}
+
+/**
+ * Pick the image to stage for an actor: an existing matching clean copy, else (if allowed) a fresh
+ * clean, else the original. `force` re-cleans even if a copy exists (the manual "clean" button).
+ * Returns { src, status } where status is "existing" | "cleaned" | "original" | "failed".
+ */
+export async function resolveArt(actor, { force = false } = {}) {
+  const original = actor.getFlag(ID, "art") || actor.img;
+  if (!original) return { src: original, status: "original" };
   try {
-    const res = await fetch(candidate, { method: "HEAD" });
-    if (res.ok && (res.headers.get("content-type") ?? "").startsWith("image/")) return candidate;
-  } catch {
-    /* offline / blocked: just use the original */
+    const rec = actor.getFlag(ID, "clean");
+    if (!force && rec?.src === original && rec.path && (await imageExists(rec.path))) {
+      return { src: withVersion(rec), status: "existing" };
+    }
+    if (!game.user.isGM || (!force && !game.settings.get(ID, "autoClean"))) return { src: original, status: "original" };
+    const fresh = await enqueue(() => runClean(actor, original));
+    return { src: withVersion(fresh), status: "cleaned" };
+  } catch (err) {
+    console.warn(`${ID} | could not clean the image for "${actor.name}"; using the original.`, err);
+    ui.notifications.warn(game.i18n.format("SHAAKSTAGE.CleanFailed", { name: actor.name }));
+    return { src: original, status: "failed" };
   }
-  return src;
 }
 
 /** Build the public entry for an actor. Returns null if an unknown-silhouette couldn't be made. */
-async function build(actor, hidden, slot) {
-  // flag `art` overrides the stage image; then prefer a cleaned copy of whichever image that is
-  const src = await preferClean(actor.getFlag(ID, "art") || actor.img);
+async function build(actor, hidden, slot, { force = false } = {}) {
+  // flag `art` overrides the stage image; then use its cleaned copy if there is/can be one
+  const { src } = await resolveArt(actor, { force });
   const entry = {
     id: slot,
     hidden: !!hidden,
@@ -182,6 +217,32 @@ export const Stage = {
     if (i < 0) return;
     s.stage[i] = entry;
     await commit(s);
+  },
+
+  /** Manual "clean": re-clean the image of a staged character and refresh it on stage. */
+  async cleanSlot(slot) {
+    if (!game.user.isGM || tooSoon(`clean:${slot}`, 1500)) return;
+    const e = getState().stage.find((x) => x.id === slot);
+    const actor = actorFor(slot);
+    if (!e || !actor) return warn("ActorMissing");
+    ui.notifications.info(game.i18n.format("SHAAKSTAGE.Cleaning", { name: actor.name }));
+    const { status } = await resolveArt(actor, { force: true });
+    if (status === "failed") return; // already warned; keep what is on stage as it is
+    const entry = await build(actor, e.hidden, slot); // uses the clean copy that was just written
+    if (!entry) return;
+    const s = clone(getState());
+    const i = s.stage.findIndex((x) => x.id === slot);
+    if (i < 0) return;
+    s.stage[i] = entry;
+    await commit(s);
+    if (status === "cleaned") ui.notifications.info(game.i18n.format("SHAAKSTAGE.Cleaned", { name: actor.name }));
+  },
+
+  /** For macros: (re)clean any actor's art without staging them. Returns the status. */
+  async cleanActor(actorOrId) {
+    const actor = typeof actorOrId === "string" ? game.actors.get(actorOrId) : actorOrId;
+    if (!game.user.isGM || !actor) return "failed";
+    return (await resolveArt(actor, { force: true })).status;
   },
 
   dismiss() {
